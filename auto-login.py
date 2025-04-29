@@ -7,28 +7,39 @@ import smtplib
 import time
 from datetime import datetime
 from email.message import EmailMessage
+import pypdf 
 
-# Bepaal veilig de map waar dit script staat
-script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Bestandslocaties
-logbestand = os.path.join(script_dir, "exth.log")
-pdf_naam = os.path.join(script_dir, "diplomavoortgang.pdf")
-
-# Instellingen
-referentie_grootte = 744
-toegestane_afwijking = 7  # bytes
-
-# E-mail instellingen
+# E-mail instellingen. Makkelijkste manier is om en app-wachtwoord te gebruiken.
+# Dit kan je instellen in je Google-account onder 'Beveiliging' > 'App-wachtwoorden'.
 smtp_server = "smtp.gmail.com"
 smtp_port = 587
 smtp_username = "jouw-emailadres@gmail.com"
 smtp_password = "jouw-app-wachtwoord"
-ontvanger_email = "jouw-ontvanger@example.com"
+ontvanger_email = "jouw-ontvanger@example.com" #Het email adres waarop je de mails moet ontvangen
 
-# Login-instellingen
-login_username = "test@test.nl"
-login_password = "mijnwachtwoord"
+# Mijn.exth inlog gegevens
+login_username = "mijn.exth gebruikersnaam"
+login_password = "mijn.exth wachtwoord"
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+logbestand = os.path.join(script_dir, "exth.log")
+pdf_naam = os.path.join(script_dir, "diplomavoortgang.pdf")
+referentie_hash_file = os.path.join(script_dir, "referentie_hash.txt")
+
+def bereken_hash_van_inhoud(bestandspad):
+    try:
+        with open(bestandspad, "rb") as f:
+            reader = pypdf.PdfReader(f)  # Gebruik pypdf.PdfReader
+            inhoud = ""
+            for pagina in reader.pages:
+                inhoud += pagina.extract_text() or ""
+            if not inhoud.strip():
+                log_bericht("PDF bevat geen tekstinhoud.")
+                return None
+        return hashlib.sha256(inhoud.encode("utf-8")).hexdigest()
+    except Exception as e:  # Gebruik een algemene Exception (pypdf heeft geen specifieke PdfReadError)
+        log_bericht(f"Fout bij lezen van PDF: {e}")
+        return None
 
 def log_bericht(tekst):
     tijd = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -64,10 +75,13 @@ def foutmelding(melding):
 def main():
     log_bericht("Script gestart.")
     try:
-        session = requests.Session()
-        url = "https://mijn.exth.nl/index.php"
-        response = session.get(url)
-        html = response.text
+        with requests.Session() as session:
+            url = "https://mijn.exth.nl/index.php"
+            response = session.get(url)
+            if response.status_code != 200:
+                foutmelding(f"Fout bij ophalen van loginpagina. Statuscode: {response.status_code}")
+                return
+            html = response.text
     except Exception as e:
         foutmelding(f"Fout bij ophalen van loginpagina: {e}")
         return
@@ -99,6 +113,9 @@ def main():
 
     try:
         post_response = session.post(url, data=payload, allow_redirects=True)
+        if post_response.status_code != 200:
+            foutmelding(f"Fout bij POST-login. Statuscode: {post_response.status_code}")
+            return
     except Exception as e:
         foutmelding(f"Fout bij POST-login: {e}")
         return
@@ -115,18 +132,33 @@ def main():
         return
 
     try:
-        bestandsgrootte = os.path.getsize(pdf_naam)
-        verschil = abs(bestandsgrootte - referentie_grootte)
+        huidige_hash = bereken_hash_van_inhoud(pdf_naam)
+        if huidige_hash is None:
+            foutmelding("Kon hash van inhoud niet berekenen.")
+            return
 
-        if verschil > toegestane_afwijking:
+        if not os.path.exists(referentie_hash_file):
+            log_bericht("Geen referentiehash gevonden. Eerste keer uitvoeren.")
+            with open(referentie_hash_file, "w") as f:
+                f.write(huidige_hash)
+            log_bericht("Referentiehash opgeslagen. Geen e-mail verzonden.")
+            return
+
+        with open(referentie_hash_file, "r") as f:
+            referentie_hash = f.read().strip()
+
+        if huidige_hash != referentie_hash:
             verzend_email(
-                "Diplomavoortgang: Grootte afwijking gedetecteerd",
-                f"Afwijking: {bestandsgrootte} bytes (verschil: {verschil} bytes)",
+                "Diplomavoortgang: Inhoud gewijzigd",
+                f"De inhoud van het bestand is gewijzigd. Nieuwe hash: {huidige_hash}",
                 bijlage_pad=pdf_naam
             )
-            log_bericht(f"Grootte afwijking gemeld: {bestandsgrootte} bytes")
+            log_bericht(f"Inhoud wijziging gedetecteerd. Nieuwe hash: {huidige_hash}")
+
+            with open(referentie_hash_file, "w") as f:
+                f.write(huidige_hash)
         else:
-            log_bericht(f"Bestandsgrootte binnen marge: {bestandsgrootte} bytes")
+            log_bericht("Geen inhoud wijziging gedetecteerd.")
 
         time.sleep(2)
         os.remove(pdf_naam)
