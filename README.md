@@ -1,6 +1,6 @@
 # Exth.nl Examenuitslag Checker
 
-Dit Python-script logt automatisch in op mijn.exth.nl, download het diplomavoortgangsoverzicht als PDF en controleert op afwijkingen in de inhoud.
+Dit Python script logt automatisch in op mijn.exth.nl, download het diplomavoortgangsoverzicht als PDF en controleert op afwijkingen in de inhoud.
 
 ## Functies
 
