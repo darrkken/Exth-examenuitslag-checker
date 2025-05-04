@@ -7,21 +7,24 @@ import smtplib
 import time
 from datetime import datetime
 from email.message import EmailMessage
-import pypdf 
+import pypdf
+import schedule  
 
 # ---------------------- zelf in te vullen ----------------------
 
-# E-mail instellingen. Makkelijkste manier is om en app-wachtwoord te gebruiken.
-# Dit kan je instellen in je Google-account onder 'Beveiliging' > 'App-wachtwoorden'.
+# E-mail instellingen. Makkelijkste manier is om een app-wachtwoord te gebruiken.
 smtp_server = "smtp.gmail.com"
 smtp_port = 587
 smtp_username = "jouw-emailadres@gmail.com"
 smtp_password = "jouw-app-wachtwoord"
-ontvanger_email = "jouw-ontvanger@example.com" #Het email adres waarop je de mails moet ontvangen
+ontvanger_email = "jouw-ontvanger@example.com"
 
-# Mijn.exth inlog gegevens
+# Mijn.exth inloggegevens
 login_username = "mijn.exth gebruikersnaam"
 login_password = "mijn.exth wachtwoord"
+
+# Schedulering: aantal minuten tussen twee runs
+RUN_EVERY_MINUTES = 30  # vul hier het gewenste interval (minuten) in
 
 # ---------------------- Python code, niet aanpassen ----------------------
 
@@ -33,7 +36,7 @@ referentie_hash_file = os.path.join(script_dir, "referentie_hash.txt")
 def bereken_hash_van_inhoud(bestandspad):
     try:
         with open(bestandspad, "rb") as f:
-            reader = pypdf.PdfReader(f)  # Gebruik pypdf.PdfReader
+            reader = pypdf.PdfReader(f)
             inhoud = ""
             for pagina in reader.pages:
                 inhoud += pagina.extract_text() or ""
@@ -41,7 +44,7 @@ def bereken_hash_van_inhoud(bestandspad):
                 log_bericht("PDF bevat geen tekstinhoud.")
                 return None
         return hashlib.sha256(inhoud.encode("utf-8")).hexdigest()
-    except Exception as e:  # Gebruik een algemene Exception (pypdf heeft geen specifieke PdfReadError)
+    except Exception as e:
         log_bericht(f"Fout bij lezen van PDF: {e}")
         return None
 
@@ -143,9 +146,13 @@ def main():
 
         if not os.path.exists(referentie_hash_file):
             log_bericht("Geen referentiehash gevonden. Eerste keer uitvoeren.")
+            verzend_email(
+                "Diplomavoortgang: Eerste run succesvol",
+                "Dit is een controle-mail om te bevestigen dat het script correct draait."
+            )
             with open(referentie_hash_file, "w") as f:
                 f.write(huidige_hash)
-            log_bericht("Referentiehash opgeslagen. Geen e-mail verzonden.")
+            log_bericht("Referentiehash opgeslagen en controle-mail verzonden.")
             return
 
         with open(referentie_hash_file, "r") as f:
@@ -158,7 +165,6 @@ def main():
                 bijlage_pad=pdf_naam
             )
             log_bericht(f"Inhoud wijziging gedetecteerd. Nieuwe hash: {huidige_hash}")
-
             with open(referentie_hash_file, "w") as f:
                 f.write(huidige_hash)
         else:
@@ -169,8 +175,13 @@ def main():
         log_bericht("PDF-bestand verwijderd.")
     except Exception as e:
         foutmelding(f"Fout bij controle of verwijderen van PDF: {e}")
-        return
 
 if __name__ == "__main__":
     main()
 
+    schedule.every(RUN_EVERY_MINUTES).minutes.do(main)
+    log_bericht(f"Gepland: elke {RUN_EVERY_MINUTES} minuten")
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
