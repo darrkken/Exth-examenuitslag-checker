@@ -9,6 +9,7 @@ from datetime import datetime
 from email.message import EmailMessage
 import pypdf 
 
+# ---------------------- zelf in te vullen ----------------------
 # E-mail instellingen. Makkelijkste manier is om en app-wachtwoord te gebruiken.
 # Dit kan je instellen in je Google-account onder 'Beveiliging' > 'App-wachtwoorden'.
 smtp_server = "smtp.gmail.com"
@@ -20,6 +21,8 @@ ontvanger_email = "jouw-ontvanger@example.com" #Het email adres waarop je de mai
 # Mijn.exth inlog gegevens
 login_username = "mijn.exth gebruikersnaam"
 login_password = "mijn.exth wachtwoord"
+
+# ---------------------- Python code, niet aanpassen ----------------------
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 logbestand = os.path.join(script_dir, "exth.log")
