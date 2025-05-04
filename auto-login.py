@@ -10,6 +10,7 @@ from email.message import EmailMessage
 import pypdf 
 
 # ---------------------- zelf in te vullen ----------------------
+
 # E-mail instellingen. Makkelijkste manier is om en app-wachtwoord te gebruiken.
 # Dit kan je instellen in je Google-account onder 'Beveiliging' > 'App-wachtwoorden'.
 smtp_server = "smtp.gmail.com"
