@@ -153,6 +153,9 @@ def main():
             with open(referentie_hash_file, "w") as f:
                 f.write(huidige_hash)
             log_bericht("Referentiehash opgeslagen en controle-mail verzonden.")
+            time.sleep(2)
+            os.remove(pdf_naam)
+            log_bericht("PDF-bestand verwijderd na eerste run.")
             return
 
         with open(referentie_hash_file, "r") as f:
