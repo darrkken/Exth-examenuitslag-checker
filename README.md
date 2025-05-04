@@ -27,3 +27,17 @@ Dit Python script logt automatisch in op mijn.exth.nl, download het diplomavoort
    - Bij een verandering van de inhoud stuurt het script een mail, met daarbij het pdf bestand.
    - Bij fouten verzendt het script automatisch een e-mailmelding naar het ingestelde e-mailadres.
    - Alle activiteiten worden gelogd in `exth.log` voor latere controle.
+
+## Gebruik
+
+1. vul je eigen gegevens in.
+2. zorg dat je de requirements geinstalleerd hebt.
+3. start het script
+- Het script controleert standaard elke 30 minuten of er een update is. 
+- De eerste keer dat je het script draait, krijg je een e-mail zodat je weet dat alles werkt.
+
+
+
+
+
+
